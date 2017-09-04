@@ -4,10 +4,9 @@ import os, sys
 import copy, numpy, math
 
 
-# TODO Handle GIFS with reduced palette
-# TODO Implement flexibility for larger/smaller GIFS (outside of 512x512 dimensions)
-# TODO Invent more elegant method for determine which frames to include in the GIF
-# TODO Scale register with image, define breakpoints on registers
+# TODO Investigate methods/libraries to compress/optimise gifs
+# TODO Implement Galois Method for LFSR
+# TODO Extend fizzle to phase between images
 
 
 def to_grayscale(im_orig):
@@ -30,7 +29,6 @@ def to_checkered(im_orig):
 def generate_fizzle_gif(im_orig, filepath):
     try:
         print("Parsing your image, doing the magic!")
-        print(im_orig.mode)
         fizzle_sequence = fizzle(im_orig, "Fibonacci")
         print("Generating your gif, this could take some time")
         imageio.mimwrite(filepath, fizzle_sequence, subrectangles=True)
@@ -42,12 +40,12 @@ def fizzle(im_orig, method="Fibonacci"):
 
     if method == "Fibonacci":
         # FIBONACCI IMPLEMENTATION
-        # A maximum length Linear Feedback Shift Register of 14 bits
+        # Currently uses a maximum length Linear Feedback Shift Register
         # This means the maximum size for an image we can fizzle is 512x512, 1024x256, etc...
 
         im_fizzle = copy.copy(im_orig)              # create a new instance of the image object
-        # Refer here for max-length LSFR taps: http://www.xilinx.com/support/documentation/application_notes/xapp052.pdf
-        lsfr_taps = {14: [0, 2, 4, 13],
+        # Refer here for max-length LFSR taps: http://www.xilinx.com/support/documentation/application_notes/xapp052.pdf
+        lfsr_taps = {14: [0, 2, 4, 13],
                      15: [13, 14],
                      16: [3, 12, 14, 15],
                      17: [13, 16],
@@ -60,18 +58,18 @@ def fizzle(im_orig, method="Fibonacci"):
         height_bitwise = math.ceil(math.log(height, 2))
 
         fizzle_sequence = [numpy.array(im_fizzle)]
-        lsfr = [0] * (width_bitwise + height_bitwise)
-        ticker = 2 ** (width_bitwise + height_bitwise - 6)
-        lsfr[-1] = 1
-        lsfr_start = lsfr
-        lsfr = shift_fibonacci(lsfr, lsfr_taps)
-        im_fizzle.putpixel((0, 0), (255, 0, 0))    # lsfr can only can be entirely zeroes if it is the start state
+        lfsr = [0] * (width_bitwise + height_bitwise)
+        ticker = 2 ** (width_bitwise + height_bitwise - 5)
+        lfsr[-1] = 1
+        lfsr_start = lfsr
+        lfsr = shift_fibonacci(lfsr, lfsr_taps)
+        im_fizzle.putpixel((0, 0), (255, 0, 0))    # LSFR can only can be entirely zeroes if it is the start state
         im_fizzle.putpixel((0, 1), (255, 0, 0))    # color the start state
 
         loop_count = 0
-        while lsfr != lsfr_start:
-            lsfr = shift_fibonacci(lsfr, lsfr_taps)
-            x, y = convert_binary_to_int(lsfr[:width_bitwise]), convert_binary_to_int(lsfr[width_bitwise:])
+        while lfsr != lfsr_start:
+            lfsr = shift_fibonacci(lfsr, lfsr_taps)
+            x, y = convert_binary_to_int(lfsr[:width_bitwise]), convert_binary_to_int(lfsr[width_bitwise:])
             try:
                 im_fizzle.putpixel((x, y), (255, 0, 0))
                 if loop_count % ticker == 0:
@@ -85,10 +83,15 @@ def fizzle(im_orig, method="Fibonacci"):
         # leave the end image for a moment before looping
         for _ in range(10):
             fizzle_sequence.append(numpy.array(im_fizzle))
-    elif method == "Galois":
-        fizzle_sequence = []
+
+    # elif method == "Galois":
+    #     # GALOIS IMPLEMENTATION
+    #     #
+    #     fizzle_sequence = []
+
     else:
         raise Exception("Unknown fizzle method chosen: {}".format(method))
+
     return fizzle_sequence
 
 
@@ -115,6 +118,7 @@ def convert_binary_to_int(bit_array):
         n += bit_array.pop() * (2 ** index)
         index += 1
     return n
+
 
 
 for infile in sys.argv[1:]:
