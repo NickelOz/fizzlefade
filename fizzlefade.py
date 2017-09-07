@@ -8,24 +8,6 @@ import copy, numpy, math
 # TODO Implement Galois Method for LFSR
 # TODO Extend fizzle to phase between images
 
-
-def to_grayscale(im_orig):
-    im_gray = im_orig.convert("L")
-    return im_gray
-
-
-def to_checkered(im_orig):
-    im_check = copy.copy(im_orig)
-    width, height = im.size
-    for x in range(0, width, 2):
-        for y in range(0, height, 2):
-            try:
-                im_check.putpixel((x, y), (255, 0, 0))
-            except IndexError:
-                print("Error colouring pixel at ({}, {})".format(x, y))
-    return im_check
-
-
 def generate_fizzle_gif(im_orig, filepath):
     try:
         print("Parsing your image, doing the magic!")
@@ -123,18 +105,9 @@ def convert_binary_to_int(bit_array):
 
 for infile in sys.argv[1:]:
     file, ext = os.path.splitext(infile)
-    # gray_file = file + "_gray.jpg"
-    # checkered_file = file + "_checkered.jpg"
     fizzle_file = file + "_fizzle.gif"
     try:
         im = Image.open(infile)
-
-        # im_gray = to_grayscale(im)
-        # im_gray.save(gray_file)
-        #
-        # im_check = to_checkered(im)
-        # im_check.save(checkered_file)
-
         generate_fizzle_gif(im, fizzle_file)
 
     except IOError as err:
